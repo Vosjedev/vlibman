@@ -331,11 +331,40 @@
 ##########
 
 function refresh {
-    warn "Not implemented yet"
+    info "Getting lates liblist.txt..."
+    download "https://vosjedev.pii.at/vlibman/liblist.txt"
 }
 
 function pull {
     warn "Not implemented yet"
+}
+
+function search {
+    function table {
+        column -t -s $'\t'
+    }
+    column --help | grep -- '--separator' >/dev/null || {
+        err "This version of columns does not support the --seperator argument. Search may not output correctly"
+        function table { cat; }
+        }
+
+    case "$1" in
+        'lang') q="$2"
+            {
+                echo -e "#name\t#description\t#languages"
+                tail -n +2 liblist.txt |\
+                while IFS=$'\t' read -r id name url desc vari; do
+                    if [[ "$vari" == *"$q"* ]]; then
+                        echo -e "$name\t$desc\t$vari"
+                    fi
+                done
+            } | table
+        ;;
+        'id') q="$2"; cat <(head -n1 liblist.txt | cut -f 1,2,4,5) <(tail -n +2 liblist.txt | cut -f 1,2,4,5 | grep -G '^'"$q"'.*') | table
+        ;;
+        *) info "Results for $1"
+            q="$1"; cat <(head -n1 liblist.txt | cut -f 2,4,5) <(tail -n +2 liblist.txt | cut -f 1,2,4,5 | grep "$q" | cut -f 2,3,4) | table
+    esac
 }
 
 function install {
@@ -402,6 +431,7 @@ do command -v "$cmd" >/dev/null || {
     quit 2
 }
 done
+
 
 # help
 function getHelp {
@@ -473,6 +503,7 @@ shift
 case "$action" in
     'refresh') refresh_cache;;
     'pull') pull "$@";;
+    'search') search "$@";;
     'init') :;;
     'reinit')
         if ask "Do you want to delete and reinstall the .vlibman directory?"; then
