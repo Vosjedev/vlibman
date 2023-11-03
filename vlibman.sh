@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 ##################
 # 'ui' functions #
 ##################
@@ -332,7 +333,15 @@
 
 function refresh {
     info "Getting lates liblist.txt..."
-    download "https://vosjedev.pii.at/vlibman/liblist.txt"
+    download "https://vosjedev.pii.at/vlibman/liblist.txt" "liblist.tmp" || {
+        err "Download failed."
+        rm liblist.tmp
+        quit 2
+    }
+    info "Replacing..."
+    rm liblist.txt
+    mv liblist.tmp liblist.txt
+    info "Done."
 }
 
 function pull {
@@ -362,7 +371,7 @@ function search {
         ;;
         'id') q="$2"; cat <(head -n1 liblist.txt | cut -f 1,2,4,5) <(tail -n +2 liblist.txt | cut -f 1,2,4,5 | grep -G '^'"$q"'.*') | table
         ;;
-        *) info "Results for $1"
+        *)
             q="$1"; cat <(head -n1 liblist.txt | cut -f 2,4,5) <(tail -n +2 liblist.txt | cut -f 1,2,4,5 | grep "$q" | cut -f 2,3,4) | table
     esac
 }
@@ -445,6 +454,12 @@ function getHelp {
      refresh : Unimplemented.
      reinit  : deletes .vlibman directory, and reruns installation.
     
+    error codes:
+     0: no errors
+     1: user error
+     2: system error
+     anything else: please make a bug report, that shouldn't happen!
+
     If no valid .vlibman directory was found in the current directory or any of its parent, the user is prompted if vlibman should install one.
  "
  exit
@@ -501,7 +516,7 @@ cd '.vlibman' || { # enter .vlibman folder
 action="$1"
 shift
 case "$action" in
-    'refresh') refresh_cache;;
+    'refresh') refresh;;
     'pull') pull "$@";;
     'search') search "$@";;
     'init') :;;
@@ -513,6 +528,9 @@ case "$action" in
             info "Done."
             install
         fi
+        ;;
+    '') quit 0;;
+    *) err "Unknown action."; quit 1
 esac
 
 
