@@ -40,9 +40,7 @@ chmod u+x vlibman.sh
 
 echo "Packing image..."
 tar -cvzf "$imagename.tar.gz" -- *
-mv "$imagename.tar.gz" "../$imagename.tar.gz"
 echo "Done packing."
-cd ..
 echo "Generating checksum..."
 sha256sum "$imagename.tar.gz" > "$imagename.checksum"
 echo "Done."
@@ -51,6 +49,7 @@ if ! [[ "$target" == '' ]]; then
     scp "$imagename.tar.gz" "$target" || { echo "Could not upload."; cleanup; exit; }
     scp "$imagename.checksum" "$target" || { echo "Could not upload."; cleanup; exit; }
     echo "Getting and modifieing versions.txt..."
+    rm versions.txt
     scp "$target/versions.txt" "./" || { echo "Could not download."; cleanup; exit; }
     versions="$imagename $(cat versions.txt)"
     echo "$versions" > versions.txt

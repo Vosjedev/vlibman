@@ -1,4 +1,4 @@
-#id	#name	#url	#description	#languages
-1698996339	lib_var	https://vosjedev.pii.at/vlibman/libs/lib_var	a global variable manager using shared memory	bash
-1698996340	input	https://vosjedev.pii.at/vlibman/libs/input	Read one character using prompt_toolkit (python)	py
-1698996341	tcp	https://vosjedev.pii.at/vlibman/libs/tcp	A non-function library for eazy tcp sockets in python	py
+#id	#name	#url	#description	#languages	#filetype
+1698996339	lib_var	https://vosjedev.pii.at/vlibman/libs/lib_var.bash	a global variable manager using shared memory	bash	sh
+1698996340	input	https://vosjedev.pii.at/vlibman/libs/input.py	Read one character using prompt_toolkit (python)	python	py
+1698996341	tcp	https://vosjedev.pii.at/vlibman/libs/tcp.py	A non-function library for eazy tcp sockets in python	python	py

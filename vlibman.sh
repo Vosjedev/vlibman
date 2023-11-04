@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+LINES="$(tput lines)"
+COLUMNS="$(tput cols)"
 
 ##################
 # 'ui' functions #
@@ -43,14 +45,7 @@
         echo -e "[$(c b)info$(c R)]" "$@"
     }
 
-# control
 
-    function quit {
-        case "$1" in
-            ''|0) info 'exit'; exit 0;;
-            * ) warn "exit (code $1)"; exit "$1"
-        esac
-    }
 
 # menus
 
@@ -162,7 +157,6 @@
         if [[ "$1" == '--menu' ]]; then
             menu=true; shift
         fi
-
         local check=1
         # free space for checklist
         echo -ne '\n\n\n\n\n\n\n\n' >/dev/stderr
@@ -345,7 +339,30 @@ function refresh {
 }
 
 function pull {
-    warn "Not implemented yet"
+    info "Getting libs..."
+    cd ..
+    for lib in "$@"; do
+        case "$lib" in
+            "id="*) IFS='=' read -r of libid of<<<"$lib"; ;;
+            *)  q="$lib"
+                results=()
+                while IFS=$'\t' read -r id name url desc lang ext version of; do # get all libs with this name
+                    if [[ "$name" == "$q" ]] || [[ "$name.$lang" == "$q" ]]|| [[ "$name.$ext" == "$q" ]]; then
+                        results+=( "$id -- $lang, $desc" )
+                    fi
+                done < <(tail -n +2 .vlibman/liblist.txt)
+                if [[ "${#results[*]}" -gt 1 ]]; then
+                    libid="$(radiolist --menu "${results[@]}" | cut -d ' ' -f 1)" # ask user what id they want
+                else libid="$(echo "${results[0]}" | cut -d ' ' -f 1)"
+                fi
+                ;;
+        esac
+        url="$(tail -n +2 .vlibman/liblist.txt | cut -f 1,3 | grep -G '^'"$libid"'.*' | cut -f 2)"
+        ext="$(tail -n +2 .vlibman/liblist.txt | cut -f 1,5 | grep -G '^'"$libid"'.*' | cut -f 2)"
+        name="$(tail -n +2 .vlibman/liblist.txt | cut -f 1,2 | grep -G '^'"$libid"'.*' | cut -f 2)"
+        info "pulling $libid from $url"
+        download "$url" "$name.$ext"
+    done
 }
 
 function search {
@@ -361,10 +378,11 @@ function search {
         'lang') q="$2"
             {
                 echo -e "#name\t#description\t#languages"
+                # shellcheck disable=2034
                 tail -n +2 liblist.txt |\
-                while IFS=$'\t' read -r id name url desc vari; do
-                    if [[ "$vari" == *"$q"* ]]; then
-                        echo -e "$name\t$desc\t$vari"
+                while IFS=$'\t' read -r id name url desc lang ext version of; do
+                    if [[ "$lang" == *"$q"* ]]; then
+                        echo -e "$name\t$desc\t$lang"
                     fi
                 done
             } | table
@@ -434,7 +452,7 @@ function install {
 ###############
 
 # check dependencies
-for cmd in "cut" "grep" "sha256sum" "mkdir" "cp" "mv" "rm" "tar"
+for cmd in "cut" "grep" "sha256sum" "mkdir" "cp" "mv" "rm" "tar" "head" "tail" "cat"
 do command -v "$cmd" >/dev/null || {
     warn "Command $cmd not found! Please install and try again."
     quit 2
@@ -469,7 +487,8 @@ function getHelp {
 for arg in "$@"; do [[ "$arg" == '--help' ]] && getHelp; [[ "$arg" != "-"* ]] && break; done
 
 # parse opts
-while getopts "gh" opt; do
+local=false
+while getopts "glh" opt; do
     case "$opt" in
         h) getHelp;;
         g)
@@ -482,6 +501,9 @@ while getopts "gh" opt; do
                 fi
             fi
             cd ~/.local/share/vlibman || { err "could not cd into global instance."; quit 2;}
+        ;;
+        l)
+            local=true
         ;;
         *) warn "invalid opt $opt"; getHelp;;
     esac
@@ -511,6 +533,11 @@ cd '.vlibman' || { # enter .vlibman folder
     err "Could not cd into $PWD/.vlibman, even though this folder is present."
     quit 2
 }
+
+if ! "$local" && ! [[ "$1" == reinit ]]; then
+    bash vlibman.sh -l "$@"
+    exit $?
+fi
 
 # determine action
 action="$1"
