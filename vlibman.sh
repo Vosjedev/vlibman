@@ -468,8 +468,9 @@ function getHelp {
 
     actions:
      init    : Does nothing, but usefull to install only.
-     pull    : Unimplemented.
-     refresh : Unimplemented.
+     pull    : Get a lib. Use the lib's name, or it's id using id=<id>. Asks which lib to pull when multiple libs with the same name exist.
+     search  : Search the libs index. Searches all fields, and displays name, description, and language in a nice table.
+     refresh : Download the latest libs index
      reinit  : deletes .vlibman directory, and reruns installation.
     
     error codes:
