@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
 
+# set the target server and path for scp
+# this is my raspberry, hosting my website. This will only work from my
+# local wifi network, so be sure to set your own server.
+target="vosje@raspberrypi:/home/vosje/https/httpssite/vlibman/images/"
+echo "target host: $target"
+echo "Press control-c now if incorrect." && sleep 1
+
 stdir="$PWD"
-imagename="image-$(date +%s)"
+imagename="$(date +%s)"
 
 function cleanup {
     echo "Cleaning up..."
-    cd "$stdir"
+    cd "$stdir" || { exit; }
     rm -vrf "images/$imagename/"
     echo 'Done.'
 }
     
 echo "Creating vlibman image with name $imagename."
-while true;do
+while true && ! [[ "$1" == unattended ]];do
     echo "Do you want to continue?"
     read -rsn1 -p "[y/n]? " yn
     case "$yn" in
@@ -34,6 +41,21 @@ chmod u+x vlibman.sh
 echo "Packing image..."
 tar -cvzf "$imagename.tar.gz" -- *
 mv "$imagename.tar.gz" "../$imagename.tar.gz"
+echo "Done packing."
+cd ..
+echo "Generating checksum..."
+sha256sum "$imagename.tar.gz" > "$imagename.checksum"
+echo "Done."
+if ! [[ "$target" == '' ]]; then
+    echo "Uploading..."
+    scp "$imagename.tar.gz" "$target" || { echo "Could not upload."; cleanup; exit; }
+    scp "$imagename.checksum" "$target" || { echo "Could not upload."; cleanup; exit; }
+    echo "Getting and modifieing versions.txt..."
+    scp "$target/versions.txt" "./" || { echo "Could not download."; cleanup; exit; }
+    versions="$imagename $(cat versions.txt)"
+    echo "$versions" > versions.txt
+    scp "versions.txt" "$target" || { echo "Could not upload."; cleanup; exit; }
+fi
 
 
 cleanup
